@@ -120,7 +120,10 @@ func (r *subscriptionResolver) GameStarts(ctx context.Context) (<-chan *model.Ga
 		return nil, err
 	}
 
-	r.Channels.GameStarts[player.GameID] = make(chan *model.Game)
+	if _, found := r.Channels.GameStarts[player.GameID]; !found {
+		r.Channels.GameStarts[player.GameID] = make(chan *model.Game)
+	}
+
 	return r.Channels.GameStarts[player.GameID], nil
 }
 
