@@ -30,9 +30,9 @@ func Middleware(repos *repo.Repos) func(http.Handler) http.Handler {
 
 			id := claims["id"].(string)
 
-			player, found := repos.PlayersRepo.GetPlayerByID(id)
+			player, err := repos.PlayersRepo.GetPlayerByID(id)
 
-			if !found {
+			if err != nil {
 				next.ServeHTTP(w, r)
 				return
 			}

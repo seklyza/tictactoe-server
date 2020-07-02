@@ -1,14 +1,21 @@
+"A player can either be the X or the O."
 enum PlayerType {
   X
   O
 }
 
+"Represents a move in the game."
 type Move {
   id: ID!
   player: Player!
+
+  "The cell which the player has performed the move on."
   index: Int!
+
+  game: Game!
 }
 
+"Represents a player in the game."
 type Player {
   id: ID!
   moves: [Move!]!
@@ -16,24 +23,53 @@ type Player {
   playerType: PlayerType!
 }
 
+"The main game type."
 type Game {
   id: ID!
+
+  "The 6-digit game code."
   code: String!
+
+  "Whether the game has started or not."
   started: Boolean!
+
+  currentTurn: Player!
   players: [Player!]!
   moves: [Move!]!
 }
 
+"Result for joining or creating a game. Contains an authentication token and the game."
 type JoinGameResult {
+  "A token used to authenticate using the Authorization header."
   token: String!
+
+  "The game joined/created."
   game: Game!
 }
 
 extend type Query {
+  "Returns the current authenticated player."
   me: Player
 }
 
 extend type Mutation {
+  "Creates a new game."
   createGame: JoinGameResult!
+
+  "Joins a game using a 6-digit game code."
   joinGame(code: String!): JoinGameResult
+
+  "Performs a move for the current game."
+  performMove(index: Int!): Move!
+}
+
+extend type Subscription {
+  "Notifies when the game starts."
+  gameStarts: Game!
+
+  "Notifies when a new move is performed."
+  newMove: Move!
+
+  "Notifies when the game ends. The return type is the winner."
+  gameEnds: Player!
 }

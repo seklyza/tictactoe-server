@@ -8,11 +8,15 @@ import (
 	"strconv"
 )
 
+// Result for joining or creating a game. Contains an authentication token and the game.
 type JoinGameResult struct {
+	// A token used to authenticate using the Authorization header.
 	Token string `json:"token"`
-	Game  *Game  `json:"game"`
+	// The game joined/created.
+	Game *Game `json:"game"`
 }
 
+// A player can either be the X or the O.
 type PlayerType string
 
 const (

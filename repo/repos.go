@@ -5,6 +5,7 @@ import "github.com/seklyza/tictactoe-server/model"
 type Repos struct {
 	GamesRepo   *GamesRepo
 	PlayersRepo *PlayersRepo
+	MovesRepo   *MovesRepo
 }
 
 func CreateRepos() *Repos {
@@ -14,6 +15,9 @@ func CreateRepos() *Repos {
 		},
 		PlayersRepo: &PlayersRepo{
 			players: make(map[string]*model.Player),
+		},
+		MovesRepo: &MovesRepo{
+			moves: make(map[string]*model.Move),
 		},
 	}
 }

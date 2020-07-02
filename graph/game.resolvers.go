@@ -5,6 +5,7 @@ package graph
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/seklyza/tictactoe-server/auth"
@@ -13,22 +14,32 @@ import (
 	"github.com/seklyza/tictactoe-server/util"
 )
 
+func (r *gameResolver) CurrentTurn(ctx context.Context, obj *model.Game) (*model.Player, error) {
+	return r.Repos.PlayersRepo.GetPlayerByID(obj.CurrentTurnID)
+}
+
 func (r *gameResolver) Players(ctx context.Context, obj *model.Game) ([]*model.Player, error) {
 	return r.Repos.PlayersRepo.GetPlayersByGameID(obj.ID), nil
 }
 
 func (r *gameResolver) Moves(ctx context.Context, obj *model.Game) ([]*model.Move, error) {
-	panic(fmt.Errorf("not implemented"))
+	return r.Repos.MovesRepo.GetMovesByGameID(obj.ID), nil
 }
 
 func (r *moveResolver) Player(ctx context.Context, obj *model.Move) (*model.Player, error) {
-	panic(fmt.Errorf("not implemented"))
+	return r.Repos.PlayersRepo.GetPlayerByID(obj.PlayerID)
+}
+
+func (r *moveResolver) Game(ctx context.Context, obj *model.Move) (*model.Game, error) {
+	return r.Repos.GamesRepo.GetGameByID(obj.GameID)
 }
 
 func (r *mutationResolver) CreateGame(ctx context.Context) (*model.JoinGameResult, error) {
 	game := r.Repos.GamesRepo.CreateGame()
 
 	me := r.Repos.PlayersRepo.CreatePlayer(model.PlayerTypeX, game.ID)
+	game.CurrentTurnID = me.ID
+
 	token, err := util.GenerateToken(me.ID)
 
 	if err != nil {
@@ -48,6 +59,10 @@ func (r *mutationResolver) JoinGame(ctx context.Context, code string) (*model.Jo
 		return nil, err
 	}
 
+	if game.Started {
+		return nil, errors.New("Game has already started.")
+	}
+
 	me := r.Repos.PlayersRepo.CreatePlayer(model.PlayerTypeO, game.ID)
 	token, err := util.GenerateToken(me.ID)
 
@@ -63,8 +78,24 @@ func (r *mutationResolver) JoinGame(ctx context.Context, code string) (*model.Jo
 	}, nil
 }
 
+func (r *mutationResolver) PerformMove(ctx context.Context, index int) (*model.Move, error) {
+	me, err := auth.GetCurrentPlayer(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	game, err := r.Repos.GamesRepo.GetGameByID(me.GameID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return r.Repos.MovesRepo.PerformMove(index, me, game)
+}
+
 func (r *playerResolver) Moves(ctx context.Context, obj *model.Player) ([]*model.Move, error) {
-	panic(fmt.Errorf("not implemented"))
+	return r.Repos.MovesRepo.GetMovesByGameID(obj.GameID), nil
 }
 
 func (r *playerResolver) Game(ctx context.Context, obj *model.Player) (*model.Game, error) {
@@ -79,6 +110,18 @@ func (r *queryResolver) Me(ctx context.Context) (*model.Player, error) {
 	}
 
 	return me, nil
+}
+
+func (r *subscriptionResolver) GameStarts(ctx context.Context) (<-chan *model.Game, error) {
+	panic(fmt.Errorf("not implemented"))
+}
+
+func (r *subscriptionResolver) NewMove(ctx context.Context) (<-chan *model.Move, error) {
+	panic(fmt.Errorf("not implemented"))
+}
+
+func (r *subscriptionResolver) GameEnds(ctx context.Context) (<-chan *model.Player, error) {
+	panic(fmt.Errorf("not implemented"))
 }
 
 // Game returns generated.GameResolver implementation.

@@ -1,6 +1,8 @@
 package repo
 
 import (
+	"errors"
+
 	"github.com/google/uuid"
 	"github.com/seklyza/tictactoe-server/model"
 )
@@ -21,10 +23,14 @@ func (r *PlayersRepo) CreatePlayer(playerType model.PlayerType, gameId string) *
 	return player
 }
 
-func (r *PlayersRepo) GetPlayerByID(id string) (*model.Player, bool) {
+func (r *PlayersRepo) GetPlayerByID(id string) (*model.Player, error) {
 	player, ok := r.players[id]
 
-	return player, ok
+	if !ok {
+		return nil, errors.New("Could not find player.")
+	}
+
+	return player, nil
 }
 
 func (r *PlayersRepo) GetPlayersByGameID(gameId string) []*model.Player {
