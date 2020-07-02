@@ -1,0 +1,39 @@
+enum PlayerType {
+  X
+  O
+}
+
+type Move {
+  id: ID!
+  player: Player!
+  index: Int!
+}
+
+type Player {
+  id: ID!
+  moves: [Move!]!
+  game: Game!
+  playerType: PlayerType!
+}
+
+type Game {
+  id: ID!
+  code: String!
+  started: Boolean!
+  players: [Player!]!
+  moves: [Move!]!
+}
+
+type JoinGameResult {
+  token: String!
+  game: Game!
+}
+
+extend type Query {
+  me: Player
+}
+
+extend type Mutation {
+  createGame: JoinGameResult!
+  joinGame(code: String!): JoinGameResult
+}
