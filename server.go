@@ -37,7 +37,10 @@ func main() {
 	repos := repo.CreateRepos()
 	channels := channel.CreateChannels()
 
-	srv := handler.New(generated.NewExecutableSchema(generated.Config{Resolvers: &graph.Resolver{Repos: repos, Channels: channels}}))
+	srv := handler.New(generated.NewExecutableSchema(generated.Config{Resolvers: &graph.Resolver{
+		Repos:    repos,
+		Channels: channels,
+	}}))
 
 	srv.AddTransport(transport.POST{})
 	srv.Use(handler.OperationFunc(func(ctx context.Context, next graphql.OperationHandler) graphql.ResponseHandler {

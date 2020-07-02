@@ -73,7 +73,9 @@ func (r *mutationResolver) JoinGame(ctx context.Context, code string) (*model.Jo
 	}
 
 	game.Started = true
-	r.Channels.GameStarts[game.ID] <- game
+	go func() {
+		r.Channels.GameStarts[game.ID] <- game
+	}()
 
 	return &model.JoinGameResult{
 		Game:  game,
@@ -100,7 +102,16 @@ func (r *mutationResolver) PerformMove(ctx context.Context, index int) (*model.M
 		return nil, err
 	}
 
-	r.Channels.NewMove[game.ID] <- move
+	for _, player := range r.Repos.PlayersRepo.GetPlayersByGameID(me.GameID) {
+		if player.ID != me.ID {
+			game.CurrentTurnID = player.ID
+			break
+		}
+	}
+
+	go func() {
+		r.Channels.NewMove[game.ID] <- move
+	}()
 
 	return move, nil
 }

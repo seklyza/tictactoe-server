@@ -27,8 +27,12 @@ func (r *MovesRepo) PerformMove(index int, player *model.Player, game *model.Gam
 		return nil, errors.New("Game hasn't started yet!")
 	}
 
+	if game.CurrentTurnID != player.ID {
+		return nil, errors.New("It's not your turn!")
+	}
+
 	for _, move := range r.moves {
-		if move.Index == index {
+		if move.Index == index && move.GameID == game.ID {
 			return nil, errors.New("Couldn't perform move.")
 		}
 	}
