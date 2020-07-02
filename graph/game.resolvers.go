@@ -46,6 +46,8 @@ func (r *mutationResolver) CreateGame(ctx context.Context) (*model.JoinGameResul
 		return nil, err
 	}
 
+	r.Channels.MakeChannelsForGame(game.ID)
+
 	return &model.JoinGameResult{
 		Game:  game,
 		Token: token,
@@ -92,7 +94,15 @@ func (r *mutationResolver) PerformMove(ctx context.Context, index int) (*model.M
 		return nil, err
 	}
 
-	return r.Repos.MovesRepo.PerformMove(index, me, game)
+	move, err := r.Repos.MovesRepo.PerformMove(index, me, game)
+
+	if err != nil {
+		return nil, err
+	}
+
+	r.Channels.NewMove[game.ID] <- move
+
+	return move, nil
 }
 
 func (r *playerResolver) Moves(ctx context.Context, obj *model.Player) ([]*model.Move, error) {
@@ -120,15 +130,17 @@ func (r *subscriptionResolver) GameStarts(ctx context.Context) (<-chan *model.Ga
 		return nil, err
 	}
 
-	if _, found := r.Channels.GameStarts[player.GameID]; !found {
-		r.Channels.GameStarts[player.GameID] = make(chan *model.Game)
-	}
-
 	return r.Channels.GameStarts[player.GameID], nil
 }
 
 func (r *subscriptionResolver) NewMove(ctx context.Context) (<-chan *model.Move, error) {
-	panic(fmt.Errorf("not implemented"))
+	player, err := auth.GetCurrentPlayer(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return r.Channels.NewMove[player.GameID], nil
 }
 
 func (r *subscriptionResolver) GameEnds(ctx context.Context) (<-chan *model.Player, error) {
