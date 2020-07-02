@@ -1,15 +1,19 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
 
+	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/handler"
+	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/go-chi/chi"
 	"github.com/rs/cors"
 	"github.com/seklyza/tictactoe-server/auth"
+	"github.com/seklyza/tictactoe-server/channel"
 	"github.com/seklyza/tictactoe-server/graph"
 	"github.com/seklyza/tictactoe-server/graph/generated"
 	"github.com/seklyza/tictactoe-server/repo"
@@ -31,13 +35,22 @@ func main() {
 	}
 
 	repos := repo.CreateRepos()
+	channels := channel.CreateChannels()
 
-	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &graph.Resolver{Repos: repos}}))
+	srv := handler.New(generated.NewExecutableSchema(generated.Config{Resolvers: &graph.Resolver{Repos: repos, Channels: channels}}))
+
+	srv.AddTransport(transport.POST{})
+	srv.Use(handler.OperationFunc(func(ctx context.Context, next graphql.OperationHandler) graphql.ResponseHandler {
+		graphql.GetOperationContext(ctx).DisableIntrospection = false
+		return next(ctx)
+	}))
+	auth.AddWSAuthTransport(srv, repos)
 
 	router.Handle("/", playground.Handler("GraphQL playground", "/graphql"))
 	router.Group(func(r chi.Router) {
 		r.Use(auth.Middleware(repos))
 		r.Handle("/graphql", srv)
+
 	})
 
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)

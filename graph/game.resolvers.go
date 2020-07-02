@@ -71,6 +71,7 @@ func (r *mutationResolver) JoinGame(ctx context.Context, code string) (*model.Jo
 	}
 
 	game.Started = true
+	r.Channels.GameStarts[game.ID] <- game
 
 	return &model.JoinGameResult{
 		Game:  game,
@@ -113,7 +114,14 @@ func (r *queryResolver) Me(ctx context.Context) (*model.Player, error) {
 }
 
 func (r *subscriptionResolver) GameStarts(ctx context.Context) (<-chan *model.Game, error) {
-	panic(fmt.Errorf("not implemented"))
+	player, err := auth.GetCurrentPlayer(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	r.Channels.GameStarts[player.GameID] = make(chan *model.Game)
+	return r.Channels.GameStarts[player.GameID], nil
 }
 
 func (r *subscriptionResolver) NewMove(ctx context.Context) (<-chan *model.Move, error) {
