@@ -10,6 +10,7 @@ import (
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/dgrijalva/jwt-go/request"
+	"github.com/gorilla/websocket"
 	"github.com/seklyza/tictactoe-server/model"
 	"github.com/seklyza/tictactoe-server/repo"
 )
@@ -83,7 +84,7 @@ func AddWSAuthTransport(srv *handler.Server, repos *repo.Repos) {
 		ctx = context.WithValue(ctx, currentPlayerKey, player) // nolint
 
 		return ctx, nil
-	}})
+	}, Upgrader: websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}})
 }
 
 func GetCurrentPlayer(ctx context.Context) (*model.Player, error) {
