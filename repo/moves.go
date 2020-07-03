@@ -22,7 +22,7 @@ func (r *MovesRepo) GetMovesByGameID(gameId string) []*model.Move {
 	return moves
 }
 
-func (r *MovesRepo) PerformMove(index int, player *model.Player, game *model.Game) (*model.Move, error) {
+func (r *MovesRepo) PerformMove(i int, j int, player *model.Player, game *model.Game) (*model.Move, error) {
 	if !game.Started {
 		return nil, errors.New("Game hasn't started yet!")
 	}
@@ -32,14 +32,15 @@ func (r *MovesRepo) PerformMove(index int, player *model.Player, game *model.Gam
 	}
 
 	for _, move := range r.moves {
-		if move.Index == index && move.GameID == game.ID {
+		if move.I == i && move.J == j && move.GameID == game.ID {
 			return nil, errors.New("Couldn't perform move.")
 		}
 	}
 
 	move := &model.Move{
 		ID:       uuid.New().String(),
-		Index:    index,
+		I:        i,
+		J:        j,
 		PlayerID: player.ID,
 		GameID:   game.ID,
 	}

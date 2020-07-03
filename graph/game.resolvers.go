@@ -73,9 +73,11 @@ func (r *mutationResolver) JoinGame(ctx context.Context, code string) (*model.Jo
 	}
 
 	game.Started = true
-	go func() {
-		r.Channels.GameStarts[game.ID] <- game
-	}()
+	for _, c := range r.Channels.GameStarts[game.ID] {
+		go func(c chan *model.Game) {
+			c <- game
+		}(c)
+	}
 
 	return &model.JoinGameResult{
 		Game:  game,
@@ -83,7 +85,7 @@ func (r *mutationResolver) JoinGame(ctx context.Context, code string) (*model.Jo
 	}, nil
 }
 
-func (r *mutationResolver) PerformMove(ctx context.Context, index int) (*model.Move, error) {
+func (r *mutationResolver) PerformMove(ctx context.Context, i int, j int) (*model.Move, error) {
 	me, err := auth.GetCurrentPlayer(ctx)
 
 	if err != nil {
@@ -96,7 +98,7 @@ func (r *mutationResolver) PerformMove(ctx context.Context, index int) (*model.M
 		return nil, err
 	}
 
-	move, err := r.Repos.MovesRepo.PerformMove(index, me, game)
+	move, err := r.Repos.MovesRepo.PerformMove(i, j, me, game)
 
 	if err != nil {
 		return nil, err
@@ -109,9 +111,11 @@ func (r *mutationResolver) PerformMove(ctx context.Context, index int) (*model.M
 		}
 	}
 
-	go func() {
-		r.Channels.NewMove[game.ID] <- move
-	}()
+	for _, c := range r.Channels.NewMove[game.ID] {
+		go func(c chan *model.Move) {
+			c <- move
+		}(c)
+	}
 
 	return move, nil
 }
@@ -141,7 +145,9 @@ func (r *subscriptionResolver) GameStarts(ctx context.Context) (<-chan *model.Ga
 		return nil, err
 	}
 
-	return r.Channels.GameStarts[player.GameID], nil
+	r.Channels.GameStarts[player.GameID][player.ID] = make(chan *model.Game)
+
+	return r.Channels.GameStarts[player.GameID][player.ID], nil
 }
 
 func (r *subscriptionResolver) NewMove(ctx context.Context) (<-chan *model.Move, error) {
@@ -151,7 +157,9 @@ func (r *subscriptionResolver) NewMove(ctx context.Context) (<-chan *model.Move,
 		return nil, err
 	}
 
-	return r.Channels.NewMove[player.GameID], nil
+	r.Channels.NewMove[player.GameID][player.ID] = make(chan *model.Move, 9)
+
+	return r.Channels.NewMove[player.GameID][player.ID], nil
 }
 
 func (r *subscriptionResolver) GameEnds(ctx context.Context) (<-chan *model.Player, error) {

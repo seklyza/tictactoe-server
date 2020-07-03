@@ -9,8 +9,11 @@ type Move {
   id: ID!
   player: Player!
 
-  "The cell which the player has performed the move on."
-  index: Int!
+  "The row which the player has performed the move on."
+  i: Int!
+
+  "The column which the player has performed the move on."
+  j: Int!
 
   game: Game!
 }
@@ -60,7 +63,7 @@ extend type Mutation {
   joinGame(code: String!): JoinGameResult
 
   "Performs a move for the current game."
-  performMove(index: Int!): Move!
+  performMove(i: Int!, j: Int!): Move!
 }
 
 extend type Subscription {
