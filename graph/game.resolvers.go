@@ -97,7 +97,7 @@ func (r *mutationResolver) PerformMove(ctx context.Context, i int, j int) (*mode
 		return nil, err
 	}
 
-	move, winnerId, err := r.Repos.MovesRepo.PerformMove(i, j, me, game)
+	move, winnerId, tie, err := r.Repos.MovesRepo.PerformMove(i, j, me, game)
 
 	if err != nil {
 		return nil, err
@@ -120,6 +120,12 @@ func (r *mutationResolver) PerformMove(ctx context.Context, i int, j int) (*mode
 		for _, c := range r.Channels.GameEnds[game.ID] {
 			go func(c chan *model.Player) {
 				c <- winner
+			}(c)
+		}
+	} else if tie { // If the game is over.
+		for _, c := range r.Channels.GameEnds[game.ID] {
+			go func(c chan *model.Player) {
+				c <- nil
 			}(c)
 		}
 	}

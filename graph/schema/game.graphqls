@@ -73,6 +73,6 @@ extend type Subscription {
   "Notifies when a new move is performed."
   newMove: Move!
 
-  "Notifies when the game ends. The return type is the winner."
-  gameEnds: Player!
+  "Notifies when the game ends. The return type is the winner. If received null then that's a tie."
+  gameEnds: Player
 }
