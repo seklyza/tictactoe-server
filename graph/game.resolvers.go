@@ -6,7 +6,6 @@ package graph
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/seklyza/tictactoe-server/auth"
 	"github.com/seklyza/tictactoe-server/graph/generated"
@@ -98,7 +97,7 @@ func (r *mutationResolver) PerformMove(ctx context.Context, i int, j int) (*mode
 		return nil, err
 	}
 
-	move, err := r.Repos.MovesRepo.PerformMove(i, j, me, game)
+	move, winnerId, err := r.Repos.MovesRepo.PerformMove(i, j, me, game)
 
 	if err != nil {
 		return nil, err
@@ -115,6 +114,14 @@ func (r *mutationResolver) PerformMove(ctx context.Context, i int, j int) (*mode
 		go func(c chan *model.Move) {
 			c <- move
 		}(c)
+	}
+
+	if winner, err := r.Repos.PlayersRepo.GetPlayerByID(winnerId); err == nil {
+		for _, c := range r.Channels.GameEnds[game.ID] {
+			go func(c chan *model.Player) {
+				c <- winner
+			}(c)
+		}
 	}
 
 	return move, nil
@@ -157,13 +164,21 @@ func (r *subscriptionResolver) NewMove(ctx context.Context) (<-chan *model.Move,
 		return nil, err
 	}
 
-	r.Channels.NewMove[player.GameID][player.ID] = make(chan *model.Move, 9)
+	r.Channels.NewMove[player.GameID][player.ID] = make(chan *model.Move)
 
 	return r.Channels.NewMove[player.GameID][player.ID], nil
 }
 
 func (r *subscriptionResolver) GameEnds(ctx context.Context) (<-chan *model.Player, error) {
-	panic(fmt.Errorf("not implemented"))
+	player, err := auth.GetCurrentPlayer(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	r.Channels.GameEnds[player.GameID][player.ID] = make(chan *model.Player)
+
+	return r.Channels.GameEnds[player.GameID][player.ID], nil
 }
 
 // Game returns generated.GameResolver implementation.
