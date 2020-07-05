@@ -73,9 +73,7 @@ func (r *mutationResolver) JoinGame(ctx context.Context, code string) (*model.Jo
 
 	game.Started = true
 	for _, c := range r.Channels.GameStarts[game.ID] {
-		go func(c chan *model.Game) {
-			c <- game
-		}(c)
+		c <- game
 	}
 
 	return &model.JoinGameResult{
@@ -111,22 +109,16 @@ func (r *mutationResolver) PerformMove(ctx context.Context, i int, j int) (*mode
 	}
 
 	for _, c := range r.Channels.NewMove[game.ID] {
-		go func(c chan *model.Move) {
-			c <- move
-		}(c)
+		c <- move
 	}
 
 	if winner, err := r.Repos.PlayersRepo.GetPlayerByID(winnerId); err == nil {
 		for _, c := range r.Channels.GameEnds[game.ID] {
-			go func(c chan *model.Player) {
-				c <- winner
-			}(c)
+			c <- winner
 		}
 	} else if tie { // If the game is over.
 		for _, c := range r.Channels.GameEnds[game.ID] {
-			go func(c chan *model.Player) {
-				c <- nil
-			}(c)
+			c <- nil
 		}
 	}
 
@@ -158,9 +150,19 @@ func (r *subscriptionResolver) GameStarts(ctx context.Context) (<-chan *model.Ga
 		return nil, err
 	}
 
-	r.Channels.GameStarts[player.GameID][player.ID] = make(chan *model.Game)
+	channel := make(chan *model.Game)
+	r.mu.Lock()
+	r.Channels.GameStarts[player.GameID][player.ID] = channel
+	r.mu.Unlock()
 
-	return r.Channels.GameStarts[player.GameID][player.ID], nil
+	go func() {
+		<-ctx.Done()
+		r.mu.Lock()
+		delete(r.Channels.GameStarts[player.GameID], player.ID)
+		r.mu.Unlock()
+	}()
+
+	return channel, nil
 }
 
 func (r *subscriptionResolver) NewMove(ctx context.Context) (<-chan *model.Move, error) {
@@ -170,9 +172,19 @@ func (r *subscriptionResolver) NewMove(ctx context.Context) (<-chan *model.Move,
 		return nil, err
 	}
 
-	r.Channels.NewMove[player.GameID][player.ID] = make(chan *model.Move)
+	channel := make(chan *model.Move)
+	r.mu.Lock()
+	r.Channels.NewMove[player.GameID][player.ID] = channel
+	r.mu.Unlock()
 
-	return r.Channels.NewMove[player.GameID][player.ID], nil
+	go func() {
+		<-ctx.Done()
+		r.mu.Lock()
+		delete(r.Channels.NewMove[player.GameID], player.ID)
+		r.mu.Unlock()
+	}()
+
+	return channel, nil
 }
 
 func (r *subscriptionResolver) GameEnds(ctx context.Context) (<-chan *model.Player, error) {
@@ -182,9 +194,19 @@ func (r *subscriptionResolver) GameEnds(ctx context.Context) (<-chan *model.Play
 		return nil, err
 	}
 
-	r.Channels.GameEnds[player.GameID][player.ID] = make(chan *model.Player)
+	channel := make(chan *model.Player)
+	r.mu.Lock()
+	r.Channels.GameEnds[player.GameID][player.ID] = channel
+	r.mu.Unlock()
 
-	return r.Channels.GameEnds[player.GameID][player.ID], nil
+	go func() {
+		<-ctx.Done()
+		r.mu.Lock()
+		delete(r.Channels.GameEnds[player.GameID], player.ID)
+		r.mu.Unlock()
+	}()
+
+	return channel, nil
 }
 
 // Game returns generated.GameResolver implementation.
