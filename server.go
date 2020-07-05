@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/handler"
@@ -37,14 +38,21 @@ func main() {
 
 	srv := handler.New(generated.NewExecutableSchema(generated.Config{Resolvers: resolver}))
 
+	debug, _ := strconv.ParseBool(os.Getenv("DEBUG"))
 	srv.AddTransport(transport.POST{})
 	srv.Use(handler.OperationFunc(func(ctx context.Context, next graphql.OperationHandler) graphql.ResponseHandler {
-		graphql.GetOperationContext(ctx).DisableIntrospection = false
+		if debug {
+			graphql.GetOperationContext(ctx).DisableIntrospection = false
+		} else {
+			graphql.GetOperationContext(ctx).DisableIntrospection = true
+		}
 		return next(ctx)
 	}))
 	auth.AddWSAuthTransport(srv, resolver.Repos)
 
-	router.Handle("/", playground.Handler("GraphQL playground", "/graphql"))
+	if debug {
+		router.Handle("/", playground.Handler("GraphQL playground", "/graphql"))
+	}
 	router.Group(func(r chi.Router) {
 		r.Use(auth.Middleware(resolver.Repos))
 		r.Handle("/graphql", srv)
